@@ -3,9 +3,14 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
+// Shim process.env for browser environment to prevent crashes
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = { env: {} };
+}
+
 // Basic verification of environment on startup
-if (typeof process !== 'undefined' && !process.env.API_KEY) {
-  console.warn("MarketGenius AI: process.env.API_KEY is not defined. Ensure your .env.local file is configured correctly.");
+if (!process.env.API_KEY) {
+  console.warn("MarketGenius AI: process.env.API_KEY is not defined. Ensure your .env.local or environment variables are configured correctly.");
 }
 
 const rootElement = document.getElementById('root');

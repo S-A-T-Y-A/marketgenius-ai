@@ -43,11 +43,12 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
   const handleGenerateImage = async () => {
     if (!topic) return;
     setImageLoading(true);
+    setError(null);
     try {
       const url = await generateMarketingImage(topic);
       setImageUrl(url);
     } catch (err: any) {
-      alert("Image generation failed. Try a different topic.");
+      setError("Image generation failed: " + err.message);
     } finally {
       setImageLoading(false);
     }
@@ -74,6 +75,19 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 h-fit">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">Content Lab</h2>
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex gap-3 items-start">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="font-bold">Generation Failed</p>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleGenerate} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Content Type</label>
@@ -133,9 +147,10 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading ? 'Crafting...' : 'Generate Copy'}
+            {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            {loading ? 'Crafting Content...' : 'Generate Copy'}
           </button>
         </form>
       </div>
@@ -186,9 +201,14 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
                <button
                   onClick={handleGenerateImage}
                   disabled={imageLoading || !isPremium}
-                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-all ${!isPremium && 'opacity-50 cursor-not-allowed'}`}
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-all ${(!isPremium || imageLoading) && 'opacity-50 cursor-not-allowed'}`}
                 >
-                  {imageLoading ? 'Generating Visual...' : (
+                  {imageLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                      Generating Visual...
+                    </>
+                  ) : (
                     <>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
