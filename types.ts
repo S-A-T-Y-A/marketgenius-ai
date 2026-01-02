@@ -21,6 +21,7 @@ export interface MarketingContent {
   tone: Tone;
   content: string;
   imageUrl?: string;
+  videoUrl?: string;
   createdAt: number;
 }
 

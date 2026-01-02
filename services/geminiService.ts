@@ -2,16 +2,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { ContentType, Tone } from "../types";
 
-/**
- * Helper to get the AI client instance safely.
- * This ensures we always check for the API key at the moment of use.
- */
 const getAIClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "API Key is missing. If you're running locally, ensure your environment variables are correctly injected into the browser build."
-    );
+    throw new Error("API Key is missing.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -21,80 +15,82 @@ export const generateMarketingContent = async (
   topic: string,
   tone: Tone,
   length: string,
-  useSearch: boolean = false,
-  additionalNotes: string = ""
-): Promise<{text: string, sources?: any[]}> => {
+  useSearch: boolean = false
+): Promise<{text: string}> => {
   const ai = getAIClient();
-  
-  const systemInstruction = `You are an expert marketing copywriter. 
-  Generate high-converting content. If search results are provided, use them to include up-to-date facts. 
-  Always use markdown formatting for clarity.`;
+  const systemInstruction = `You are a world-class marketing director. Generate high-converting ${type} content. 
+  For Social Media, include relevant hashtags. For Email, include a Subject Line. 
+  For Ad Copy, include a clear Call to Action (CTA). Use clean Markdown formatting.`;
 
-  const prompt = `Generate a ${type} about: "${topic}".
-  Tone: ${tone}
-  Length: ${length}
-  Notes: ${additionalNotes}`;
+  const prompt = `Topic: "${topic}"\nTone: ${tone}\nTarget Length: ${length}`;
 
   try {
-    const config: any = {
-      systemInstruction,
-      temperature: 0.7,
-    };
-
-    if (useSearch) {
-      config.tools = [{ googleSearch: {} }];
-    }
-
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
-      config,
+      config: { systemInstruction, temperature: 0.8 },
     });
-
-    return {
-      text: response.text || "No content was generated.",
-      sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks
-    };
+    return { text: response.text || "" };
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    throw new Error(error?.message || "An unexpected error occurred during content generation.");
+    throw new Error(error?.message || "Content generation failed.");
   }
 };
 
 export const generateMarketingImage = async (prompt: string): Promise<string> => {
   const ai = getAIClient();
-  
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3-pro-image-preview',
       contents: {
-        parts: [{ text: `High quality professional marketing photography for: ${prompt}. Professional studio lighting, clean commercial aesthetic, 4k high resolution.` }]
+        parts: [{ text: `Commercial high-end marketing photography for: ${prompt}. Professional studio lighting, clean minimal background, 4k, photorealistic.` }]
       },
-      config: {
-        imageConfig: { aspectRatio: "1:1" }
-      }
+      config: { imageConfig: { aspectRatio: "1:1", imageSize: "1K" } }
     });
 
-    let base64Data = "";
-    let mimeType = "image/png";
-
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          base64Data = part.inlineData.data;
-          mimeType = part.inlineData.mimeType;
-          break;
-        }
-      }
+    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    if (part?.inlineData) {
+      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
     }
-
-    if (base64Data) {
-      return `data:${mimeType};base64,${base64Data}`;
-    }
-    
-    throw new Error("The image generation model returned no data. Try a different topic.");
+    throw new Error("No image data returned.");
   } catch (error: any) {
-    console.error("Image Generation Error:", error);
-    throw new Error(error?.message || "Failed to generate AI visual.");
+    throw new Error("Image Generation failed: " + error.message);
+  }
+};
+
+export const generateMarketingVideo = async (prompt: string, onProgress?: (msg: string) => void): Promise<string> => {
+  const ai = getAIClient();
+  
+  // Check if key is selected (standard procedure for Veo)
+  if (typeof window !== 'undefined' && (window as any).aistudio) {
+    const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+    if (!hasKey) {
+      await (window as any).aistudio.openSelectKey();
+    }
+  }
+
+  onProgress?.("Initializing Cinematic Engine...");
+  
+  try {
+    let operation = await ai.models.generateVideos({
+      model: 'veo-3.1-fast-generate-preview',
+      prompt: `High quality commercial marketing video: ${prompt}. Cinematic lighting, smooth camera movement, professional advertising style.`,
+      config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
+    });
+
+    onProgress?.("Rendering frames...");
+    while (!operation.done) {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      onProgress?.("Applying color grading and motion effects...");
+      operation = await ai.operations.getVideosOperation({ operation: operation });
+    }
+
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    if (!downloadLink) throw new Error("Video generation failed.");
+
+    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  } catch (error: any) {
+    throw new Error("Video Generation failed: " + error.message);
   }
 };
