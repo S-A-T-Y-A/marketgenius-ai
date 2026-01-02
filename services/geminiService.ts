@@ -2,6 +2,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { ContentType, Tone } from "../types";
 
+// Helper to get the AI client safely
+const getAIClient = () => {
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : (window as any).API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY is missing. Please set it in your environment variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
 export const generateMarketingContent = async (
   type: ContentType,
   topic: string,
@@ -10,7 +19,7 @@ export const generateMarketingContent = async (
   useSearch: boolean = false,
   additionalNotes: string = ""
 ): Promise<{text: string, sources?: any[]}> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAIClient();
   
   const systemInstruction = `You are an expert marketing copywriter. 
   Generate high-converting content. If search results are provided, use them to include up-to-date facts.`;
@@ -42,12 +51,12 @@ export const generateMarketingContent = async (
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error("Failed to generate content.");
+    throw new Error(error instanceof Error ? error.message : "Failed to generate content.");
   }
 };
 
 export const generateMarketingImage = async (prompt: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAIClient();
   
   try {
     const response = await ai.models.generateContent({
