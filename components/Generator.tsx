@@ -23,6 +23,15 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
   const [length, setLength] = useState('Medium (~200 words)');
   const [useSearch, setUseSearch] = useState(false);
 
+  const suggestions = [
+    "Eco-friendly bamboo coffee cups",
+    "AI-powered project management SaaS",
+    "Summer flash sale for luxury watches",
+    "Organic cold-pressed juice subscription",
+    "Local artisan bakery opening weekend",
+    "Premium yoga retreats in Bali"
+  ];
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -69,6 +78,11 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
     alert("Saved to history!");
   };
 
+  const handleSuggestionClick = (sug: string) => {
+    setTopic(sug);
+    // Smooth scroll to top of form if needed or just provide visual feedback
+  };
+
   const isPremium = user.role === 'premium';
 
   return (
@@ -110,15 +124,33 @@ const Generator: React.FC<GeneratorProps> = ({ user, onContentGenerated }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Topic</label>
+            <div className="flex justify-between items-end mb-1">
+              <label className="block text-sm font-medium text-slate-700">Topic</label>
+              <span className="text-[10px] text-slate-400 font-medium">Be specific for better results</span>
+            </div>
             <textarea
               required
               rows={3}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm transition-all outline-none"
               placeholder="What are we promoting?"
             />
+            <div className="mt-3">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Try these:</p>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((sug, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSuggestionClick(sug)}
+                    className="text-[11px] bg-slate-50 text-slate-600 px-2.5 py-1.5 rounded-lg border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 transition-all active:scale-95"
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
