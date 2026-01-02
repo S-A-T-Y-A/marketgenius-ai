@@ -2,15 +2,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { ContentType, Tone } from "../types";
 
-// Helper to get the AI client safely
-const getAIClient = () => {
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : (window as any).API_KEY;
-  if (!apiKey) {
-    throw new Error("API_KEY is missing. Please set it in your environment variables.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
 export const generateMarketingContent = async (
   type: ContentType,
   topic: string,
@@ -19,7 +10,8 @@ export const generateMarketingContent = async (
   useSearch: boolean = false,
   additionalNotes: string = ""
 ): Promise<{text: string, sources?: any[]}> => {
-  const ai = getAIClient();
+  // Direct initialization as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const systemInstruction = `You are an expert marketing copywriter. 
   Generate high-converting content. If search results are provided, use them to include up-to-date facts.`;
@@ -39,6 +31,7 @@ export const generateMarketingContent = async (
       config.tools = [{ googleSearch: {} }];
     }
 
+    // Using the required direct call pattern
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
@@ -56,7 +49,7 @@ export const generateMarketingContent = async (
 };
 
 export const generateMarketingImage = async (prompt: string): Promise<string> => {
-  const ai = getAIClient();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
@@ -69,10 +62,24 @@ export const generateMarketingImage = async (prompt: string): Promise<string> =>
       }
     });
 
-    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-    if (part?.inlineData) {
-      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    // Iterate to find the image part as per guidelines
+    let base64Data = "";
+    let mimeType = "image/png";
+
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          base64Data = part.inlineData.data;
+          mimeType = part.inlineData.mimeType;
+          break;
+        }
+      }
     }
+
+    if (base64Data) {
+      return `data:${mimeType};base64,${base64Data}`;
+    }
+    
     throw new Error("No image data returned.");
   } catch (error) {
     console.error("Image Generation Error:", error);
